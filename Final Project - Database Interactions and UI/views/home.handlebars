@@ -1,0 +1,235 @@
+
+
+<h1>Exercise table</h1>
+
+<form>
+    <fieldset>
+        <legend>New Workout</legend>
+        <label for="name">Exercise Name</label>
+        <input id="name" type="text" required>
+        <label for="reps">Reps</label>
+        <input id="reps" type="number">
+        <label for="weight">Weight</label>
+        <input id="weight" type="number">
+        <label for="date">Date</label>
+        <input id="date" type="date">
+        <label for="lbs" >lbs</label>
+        <input type="radio" name="lbs" value=1>
+        <label for="lbs">kgs</label>
+        <input type="radio" name="lbs" value=0>
+        <input type="button" id="submit" value="Submit" onclick="add()">
+    </fieldset>
+</form>
+
+
+
+<table id="workoutList">
+    <thead>
+        <tr>
+            <th>Exercise Name</th>
+            <th>Repetitions</th>
+            <th>Weight</th>
+            <th>Date</th>
+            <th>lbs/kgs</th>
+        </tr>
+    </thead>
+    <tbody id="tbody">
+         {{#each rowData}}
+         <tr>
+             <td>{{this.name}}</td>
+             <td>{{this.reps}}</td>
+             <td>{{this.weight}}</td>
+             <td>{{this.date}}</td>
+             <td>{{this.lbs}}</td>
+             <td>
+                 <form action="/edit" method="GET">
+                     <input type="hidden" name="editId" value="{{this.id}}">
+                 </form>
+            </td>
+            <td>
+                <form>
+                    <input type="hidden" name="deleteId" value="{{this.id}}">
+                </form>
+           </td>
+         </tr>
+         {{/each}}
+    </tbody>
+</table>
+
+<script>
+    
+    
+function queryGen(reps, weight, date, lb) {
+    var query = '';
+    query += "&reps=" + reps + "&weight=" + weight + "&date=" + date + "&lbs=" + lb;
+
+    return query;
+}
+    
+function deleteWorkout(event, workoutList){
+    var req = new XMLHttpRequest();
+    var form = event.target.parentNode;
+    var inputs = form.getElementsByTagName('input');
+    var id = inputs[0].value;
+    req.open("GET", "/delete?deleteId=" + id, true);
+    req.addEventListener("load", function() {
+        var table = document.getElementById("workoutList");
+        var rowCount = table.rows.length;
+        for (var i = 0; i < rowCount; i++) {
+            var row = table.rows[i];
+            if (row == event.target.parentNode.parentNode.parentNode) {
+                table.deleteRow(i);
+                rowCount--;
+                i--;
+            }
+        }
+    });
+    req.send(null);
+    event.preventDefault();
+}
+   
+    
+    
+function updateButton() {
+    var input = document.createElement('input');
+    var attributes = ["type", "name", "value"];
+    var values = ["submit", "edit", "Edit"];
+
+    for (var i = 0; i < attributes.length; i++) {
+        input.setAttribute(attributes[i], values[i])
+    }
+    
+    return input;
+}
+
+    
+    
+function removeButton(){
+    var input = document.createElement('input');
+    var attributes = ["type", "name", "value", "onclick"];
+    var values = ["submit", "delete", "Delete", "deleteWorkout(event, 'workoutList')"];
+
+    for (var i = 0; i < attributes.length; i++) {
+        input.setAttribute(attributes[i], values[i])
+    }
+    
+    return input;
+}
+
+
+    
+var tbody = document.getElementById("tbody");
+var rows = tbody.getElementsByTagName("tr");
+for (var i = 0; i < rows.length; i++) {
+    var forms = rows[i].querySelectorAll('form');
+    forms[0].appendChild(updateButton());
+    forms[1].appendChild(removeButton());
+}
+
+ 
+    
+function clearAddForm(){
+    document.getElementById("name").value = '';
+    document.getElementById("reps").value = '';
+    document.getElementById("weight").value = '';
+    document.getElementById("date").value = '';
+    var radio = document.getElementsByName("lbs");
+    for (var i = 0; i < radio.length; i++) {
+        if(radio[i].checked) {
+            radio[i].checked = false;
+        }
+    }
+} 
+    
+  
+    
+function add() {
+    var req = new XMLHttpRequest();
+    var name = document.getElementById("name").value;
+    var reps = document.getElementById("reps").value;
+    var weight = document.getElementById("weight").value;
+    var date = document.getElementById("date").value;
+    var lbs = '';
+    
+    var radio = document.getElementsByName("lbs");
+    for (var i = 0; i < radio.length; i++) {
+        if (radio[i].checked) {
+                lbs = radio[i].value;
+        }
+    }
+    
+    
+    var newQuery = queryGen(reps, weight, date, lbs);
+    if (name !== '') {
+            req.open("GET", "/insert?name=" + name + newQuery, true);
+            req.addEventListener("load", function() {
+                var response = JSON.parse(req.responseText);
+                var tbody = document.getElementById("tbody");
+                var row = document.createElement('tr');
+                var td = document.createElement('td');
+                td.textContent = response[0].name;
+                row.appendChild(td);
+                td = document.createElement('td');
+                td.textContent = response[0].reps;
+                row.appendChild(td);
+                td = document.createElement('td');
+                td.textContent = response[0].weight;
+                row.appendChild(td);
+                td = document.createElement('td');
+                td.textContent = response[0].date;
+                row.appendChild(td);
+                td = document.createElement('td');
+                td.textContent = response[0].lbs;
+                row.appendChild(td);
+                
+                
+                
+                var update = updateButton();
+                var remove = removeButton();
+                td = document.createElement('td');
+                
+                //Create new form and set attributes
+                var form = document.createElement('form');
+                var attributes = ["action", "method"];
+                var values = ["/edit", "GET"];
+                for (var i = 0; i < attributes.length; i++) {
+                    form.setAttribute(attributes[i], values[i])
+                }
+                
+                
+                //create the input and append it along with the other elements for the update button
+                var input = document.createElement('input');
+                var attributes = ["type", "name", "value"];
+                var values = ["hidden", "editId", response[0].id];
+                for (var i = 0; i < attributes.length; i++) {
+                    input.setAttribute(attributes[i], values[i])
+                }
+                form.appendChild(input);
+                form.appendChild(update);
+                td.appendChild(form);
+                row.appendChild(td);
+                
+                
+                //create the input and append it along with the other elements for the delete button
+                td = document.createElement('td');
+                form = document.createElement('form');
+                input = document.createElement('input');
+                var attributes = ["type", "name", "value"];
+                var values = ["hidden", "id", response[0].id];
+                for (var i = 0; i < attributes.length; i++) {
+                    input.setAttribute(attributes[i], values[i])
+                }
+                form.appendChild(input);
+                form.appendChild(remove);
+                td.appendChild(form);
+                row.appendChild(td);
+                
+                //append everything that's new to the table body
+                tbody.appendChild(row);
+            });
+            req.send(null);
+            clearAddForm();
+            event.preventDefault();
+        }
+}
+</script>
